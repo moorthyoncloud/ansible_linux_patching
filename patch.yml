@@ -11,7 +11,7 @@
     - name: Update APT-based servers
       apt:
         update_cache: yes
-        upgrade: dist
+        upgrade: safe
         autoremove: yes
       when: ansible_os_family == "Debian"
 
