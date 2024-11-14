@@ -1,0 +1,40 @@
+---
+- name: Patch and reboot servers if required
+  hosts: all
+  become: yes
+  serial: 3
+  tasks:
+    - name: Update RPM-based servers
+      command: "yum -y update"
+      when: ansible_os_family == "RedHat"
+
+    - name: Update APT-based servers
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Check if reboot is required (Debian-based)
+      stat:
+        path: /var/run/reboot-required
+      register: debian_reboot_required
+      when: ansible_os_family == "Debian"
+
+    - name: Check if reboot is required (RedHat-based)
+      shell: needs-restarting -r
+      register: redhat_reboot_required
+      ignore_errors: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Reboot the server if needed (Debian-based)
+      reboot:
+      when: debian_reboot_required.stat is defined and debian_reboot_required.stat.exists and ansible_os_family == "Debian"
+
+    - name: Reboot the server if needed (RedHat-based)
+      reboot:
+      when: redhat_reboot_required.rc is defined and redhat_reboot_required.rc == 1 and ansible_os_family == "RedHat"
+
+    - name: Pause between batches in minutes
+      pause:
+        minutes: 1
